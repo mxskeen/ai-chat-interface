@@ -1,11 +1,8 @@
 // app/api/chat/route.ts
-import { convertToModelMessages, streamText, tool, UIMessage, streamUI } from 'ai/rsc';
+import { convertToModelMessages, streamText, tool, UIMessage } from 'ai';
 import { z } from 'zod';
 import { tvly } from '@/lib/tavily';
 import { znapai } from '@/lib/znapai';
-import { Card, CardBody } from '@heroui/react';
-import { CodeSnippet, LoadingComponent, PropsDefinition, StylingNotes, UsageExample } from '@/components/chat/ToolParts';
-import { ReactNode } from 'react';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -87,75 +84,40 @@ export const browseDocumentation = tool({
   },
 });
 
-const componentGenerationSchema = z.object({
-  componentName: z.string().describe('Name of the component to generate'),
-  apiDescription: z.string().describe('Description of the API functionality'),
-  props: z.array(z.object({
-    name: z.string(),
-    type: z.string(),
-    required: z.boolean().default(false),
-    description: z.string(),
-  })).optional(),
-  styling: z.string().describe('Styling preferences and requirements'),
-});
-
 // Component generation tool remains the same
 export const generateComponent = tool({
   description: 'Generate React components from API documentation with TypeScript and TailwindCSS',
-  inputSchema: componentGenerationSchema,
-  generate: async function* (args: z.infer<typeof componentGenerationSchema>): AsyncGenerator<ReactNode> {
-    yield <LoadingComponent />;
-
-    const result = await streamUI({
-      model: znapai('gpt-4o-mini'),
-      prompt: `Generate a React component called ${args.componentName} based on this API description: ${args.apiDescription}.
-      
-      Requirements:
-      - Use TypeScript with proper type definitions
-      - Use TailwindCSS for styling
-      - Use HeroUI components (not shadcn/ui)
-      - Include proper error handling
-      - Make it responsive
-      - Add accessibility attributes
-      ${args.styling || ''}
-      
-      ${args.props ? `Props: ${JSON.stringify(args.props, null, 2)}` : ''}
-      `,
-      text: ({ content }: { content: string }) => <div>{content}</div>,
-      tools: {
-        showComponent: {
-          description: 'Show the generated React component with usage examples',
-          inputSchema: z.object({
-            code: z.string().describe('The React component code'),
-            usage: z.string().describe('Usage example'),
-            propsDefinition: z.string().describe('Props interface definition'),
-            stylingNotes: z.string().describe('Styling and customization notes'),
-          }),
-          generate: async function* ({ code, usage, propsDefinition, stylingNotes }: { code: string; usage: string; propsDefinition: string; stylingNotes: string }) {
-            yield (
-              <div className="space-y-4">
-                <CodeSnippet code={code} />
-                <div className="grid md:grid-cols-2 gap-4">
-                  <PropsDefinition content={propsDefinition} />
-                  <UsageExample content={usage} />
-                </div>
-                <StylingNotes content={stylingNotes} />
-              </div>
-            );
-          },
-        },
-      },
-    });
-
-    return result.value;
+  inputSchema: z.object({
+    componentName: z.string().describe('Name of the component to generate'),
+    apiDescription: z.string().describe('Description of the API functionality'),
+    props: z.array(z.object({
+      name: z.string(),
+      type: z.string(),
+      required: z.boolean().default(false),
+      description: z.string(),
+    })).optional(),
+    styling: z.string().describe('Styling preferences and requirements'),
+  }),
+  execute: async ({ componentName, apiDescription, props, styling }) => {
+    return {
+      componentName,
+      apiDescription,
+      props: props || [],
+      styling,
+    };
   },
 });
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
-
-  const result = await streamText({
+  
+  const result = streamText({
     model: znapai('gpt-4o-mini'),
+    system: `You are an AI assistant that helps developers integrate APIs and generate React components. 
+    When given API documentation URLs, use the browseDocumentation tool to fetch and summarize the content.
+    When asked to search for documentation, use the browseDocumentation tool with isSearch=true.
+    When asked to generate components, use the generateComponent tool to create TypeScript React components with TailwindCSS styling.
+    Always provide clear explanations and usage examples.`,
     messages: convertToModelMessages(messages),
     tools: {
       browseDocumentation,
@@ -163,5 +125,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return result.toAIStreamResponse();
+  return result.toUIMessageStreamResponse();
 }

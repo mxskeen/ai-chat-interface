@@ -1,37 +1,42 @@
 // components/chat/ChatInput.tsx
-import { Input } from '@heroui/react';
-import { UIMessage } from '@ai-sdk/react';
+import { Button, Input } from '@heroui/react';
+import { Send } from 'lucide-react';
 
 interface ChatInputProps {
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
-  onSend?: (value: string) => void; // onSend is optional
+  onChange: (value: string) => void;
+  onSend: (text: string) => void;
   disabled?: boolean;
 }
 
-export function ChatInput({
-  value,
-  onChange,
-  placeholder,
-  onSend,
-  disabled,
-}: ChatInputProps) {
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && onSend) {
+export function ChatInput({ value, onChange, onSend, disabled }: ChatInputProps) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (value.trim() && !disabled) {
       onSend(value);
     }
   };
 
   return (
-    <input
-      type="text"
-      value={value}
-      onChange={onChange}
-      onKeyDown={handleKeyDown}
-      placeholder={placeholder || 'Type a message...'}
-      className="w-full p-2 border rounded"
-      disabled={disabled}
-    />
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Ask about API documentation or request components..."
+        disabled={disabled}
+        className="flex-1"
+        size="sm"
+      />
+      <Button 
+        type="submit" 
+        disabled={disabled || !value.trim()}
+        isLoading={disabled}
+        size="sm"
+        color="primary"
+        startContent={<Send size={16} />}
+      >
+        Send
+      </Button>
+    </form>
   );
 }

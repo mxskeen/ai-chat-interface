@@ -1,9 +1,6 @@
-'use client';
-
+// components/chat/ToolParts.tsx
 import { Card, CardBody, Button } from '@heroui/react';
 import { ExternalLink, Search } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 // Define types for tool parts
 interface ToolPartBase {
@@ -245,44 +242,3 @@ export function ComponentToolPart({ part }: ComponentToolPartProps) {
       return null;
   }
 }
-
-export const LoadingComponent = () => (
-  <Card className="w-full">
-    <CardBody>
-      <div className="animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-        <div className="h-20 bg-gray-200 rounded"></div>
-      </div>
-    </CardBody>
-  </Card>
-);
-
-export const CodeSnippet = ({ code }: { code: string }) => (
-  <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-    <SyntaxHighlighter language="tsx" style={vscDarkPlus} customStyle={{ background: 'transparent', border: 'none', padding: 0 }}>
-      {code}
-    </SyntaxHighlighter>
-  </div>
-);
-
-export const PropsDefinition = ({ content }: { content: string }) => (
-  <div className="bg-blue-50 p-4 rounded-lg">
-    <h4 className="font-semibold mb-2">Props Interface:</h4>
-    <pre className="text-sm bg-white p-2 rounded">{content}</pre>
-  </div>
-);
-
-export const UsageExample = ({ content }: { content: string }) => (
-  <div className="bg-green-50 p-4 rounded-lg">
-    <h4 className="font-semibold mb-2">Usage Example:</h4>
-    <pre className="text-sm bg-white p-2 rounded">{content}</pre>
-  </div>
-);
-
-export const StylingNotes = ({ content }: { content: string }) => (
-  <div className="bg-yellow-50 p-4 rounded-lg">
-    <h4 className="font-semibold mb-2">Styling & Customization:</h4>
-    <p className="text-sm">{content}</p>
-  </div>
-);

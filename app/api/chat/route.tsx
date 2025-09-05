@@ -1,113 +1,154 @@
-// app/api/chat/route.tsx (refactored end-to-end)
-import { streamText, convertToModelMessages, tool } from 'ai';
+// app/api/chat/route.ts
+import { convertToModelMessages, streamText, tool, UIMessage, streamUI } from 'ai/rsc';
 import { z } from 'zod';
 import { tvly } from '@/lib/tavily';
 import { znapai } from '@/lib/znapai';
-import type { UIMessage } from '@ai-sdk/react';
+import { Card, CardBody } from '@heroui/react';
+import { CodeSnippet, LoadingComponent, PropsDefinition, StylingNotes, UsageExample } from '@/components/chat/ToolParts';
+import { ReactNode } from 'react';
 
+// Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
-interface TavilyResult { title: string; url: string; content: string; raw_content?: string }
+interface SearchResult {
+  url: string;
+  title: string;
+  content: string;
+  rawContent?: string;
+}
 
-// Browse / documentation tool
+// Enhanced browsing tool using Tavily
 export const browseDocumentation = tool({
-  description: 'Browse and fetch content from API documentation URLs or perform a search query.',
+  description: 'Browse and fetch content from API documentation URLs or search for documentation',
   inputSchema: z.object({
-    url: z.string().describe('Either a full URL to fetch related docs for, or a search query'),
-    isSearch: z.boolean().optional().describe('True if the url field is actually a search query')
+    url: z.string().describe('The URL of the API documentation to browse or search query'),
+    isSearch: z.boolean().optional().describe('Set to true if input is a search query instead of a URL'),
   }),
   execute: async ({ url, isSearch = false }) => {
     try {
+      let result;
+      
       if (isSearch) {
+        // Use Tavily search for documentation
         const response = await tvly.search(url, {
-          search_depth: 'advanced',
-          max_results: 5,
+          search_depth: "advanced",
+          max_results: 3,
           include_answer: true,
-          include_raw_content: true
+          include_raw_content: true,
         });
-        return {
+        
+        result = {
           type: 'search',
           query: url,
           answer: response.answer,
-          results: response.results?.map((r: TavilyResult) => ({
-            title: r.title,
-            url: r.url,
-            content: r.content?.slice(0, 1200)
-          }))
+          results: response.results,
         };
+      } else {
+        // Try to extract content from specific URL
+        const domain = new URL(url).hostname;
+        const searchQuery = `site:${domain} documentation`;
+        
+        const response = await tvly.search(searchQuery, {
+          search_depth: "advanced",
+          max_results: 5,
+          include_answer: true,
+          include_raw_content: true,
+        });
+        
+        // Find the most relevant result matching the URL
+        const relevantResult = response.results.find((item: SearchResult) => 
+          item.url.includes(domain) || 
+          item.url.includes(url.split('/')[2])
+        );
+        
+        if (relevantResult) {
+          result = {
+            type: 'url',
+            url: url,
+            title: relevantResult.title,
+            content: relevantResult.content,
+            rawContent: relevantResult.rawContent,
+          };
+        } else {
+          // Fallback to general search results
+          result = {
+            type: 'search',
+            query: url,
+            answer: response.answer,
+            results: response.results,
+          };
+        }
       }
-      // Treat as URL – derive domain & perform focused search
-      const domain = new URL(url).hostname;
-      const focusedQuery = `site:${domain} api documentation`;
-      const response = await tvly.search(focusedQuery, {
-        search_depth: 'advanced',
-        max_results: 6,
-        include_answer: true,
-        include_raw_content: true
-      });
-      const match = response.results?.find((r: TavilyResult) => r.url.includes(domain));
-      if (match) {
-        return {
-          type: 'url',
-          url,
-          title: match.title,
-          content: match.content?.slice(0, 5000),
-          rawContent: match.rawContent?.slice(0, 6000)
-        };
-      }
-      return {
-        type: 'search',
-        query: url,
-        answer: response.answer,
-        results: response.results?.map((r: TavilyResult) => ({
-          title: r.title,
-          url: r.url,
-          content: r.content?.slice(0, 1200)
-        }))
-      };
-    } catch (e) {
-      throw new Error(`Browse failure: ${(e as Error).message}`);
+      
+      return result;
+    } catch (error) {
+      throw new Error(`Failed to browse documentation: ${error instanceof Error ? error.message : String(error)}`);
     }
-  }
+  },
 });
 
-// Component generation tool
-const componentGenSchema = z.object({
-  componentName: z.string(),
-  apiDescription: z.string(),
+const componentGenerationSchema = z.object({
+  componentName: z.string().describe('Name of the component to generate'),
+  apiDescription: z.string().describe('Description of the API functionality'),
   props: z.array(z.object({
     name: z.string(),
     type: z.string(),
     required: z.boolean().default(false),
-    description: z.string()
+    description: z.string(),
   })).optional(),
-  styling: z.string().default('').describe('Styling preferences / Tailwind direction')
+  styling: z.string().describe('Styling preferences and requirements'),
 });
 
+// Component generation tool remains the same
 export const generateComponent = tool({
-  description: 'Generate a typed React component (Tailwind + HeroUI) including usage & props interface.',
-  inputSchema: componentGenSchema,
-  execute: async ({ componentName, apiDescription, props, styling }) => {
-    // Build interface from props (deterministic). For richer AI authored code we could invoke a model, but this keeps reliability high.
-    const interfaceName = `${componentName}Props`;
-    const propsInterface = `export interface ${interfaceName} {\n${(props||[]).map(p => `  /** ${p.description} */\n  ${p.name}${p.required ? '' : '?'}: ${p.type};`).join('\n')}\n}`;
+  description: 'Generate React components from API documentation with TypeScript and TailwindCSS',
+  inputSchema: componentGenerationSchema,
+  generate: async function* (args: z.infer<typeof componentGenerationSchema>): AsyncGenerator<ReactNode> {
+    yield <LoadingComponent />;
 
-    const heroImports = `import { Card, CardHeader, CardBody, CardFooter, Button } from '@heroui/react';`;
+    const result = await streamUI({
+      model: znapai('gpt-4o-mini'),
+      prompt: `Generate a React component called ${args.componentName} based on this API description: ${args.apiDescription}.
+      
+      Requirements:
+      - Use TypeScript with proper type definitions
+      - Use TailwindCSS for styling
+      - Use HeroUI components (not shadcn/ui)
+      - Include proper error handling
+      - Make it responsive
+      - Add accessibility attributes
+      ${args.styling || ''}
+      
+      ${args.props ? `Props: ${JSON.stringify(args.props, null, 2)}` : ''}
+      `,
+      text: ({ content }: { content: string }) => <div>{content}</div>,
+      tools: {
+        showComponent: {
+          description: 'Show the generated React component with usage examples',
+          inputSchema: z.object({
+            code: z.string().describe('The React component code'),
+            usage: z.string().describe('Usage example'),
+            propsDefinition: z.string().describe('Props interface definition'),
+            stylingNotes: z.string().describe('Styling and customization notes'),
+          }),
+          generate: async function* ({ code, usage, propsDefinition, stylingNotes }: { code: string; usage: string; propsDefinition: string; stylingNotes: string }) {
+            yield (
+              <div className="space-y-4">
+                <CodeSnippet code={code} />
+                <div className="grid md:grid-cols-2 gap-4">
+                  <PropsDefinition content={propsDefinition} />
+                  <UsageExample content={usage} />
+                </div>
+                <StylingNotes content={stylingNotes} />
+              </div>
+            );
+          },
+        },
+      },
+    });
 
-    const componentCode = `import React from 'react';\n${heroImports}\n${propsInterface}\n\nexport function ${componentName}({ ${(props||[]).map(p=>p.name).join(', ')} }: ${interfaceName}) {\n  return (\n    <Card className=\"w-full max-w-md shadow-lg border border-default-200\">\n      <CardHeader className=\"pb-2\">\n        <h3 className=\"text-lg font-semibold\">${componentName}</h3>\n      </CardHeader>\n      <CardBody className=\"space-y-2 text-sm\">\n        {/* Rendered content based on API data / props */}\n        <pre className=\"bg-default-100 rounded p-2 text-xs overflow-x-auto\">{JSON.stringify({ ${(props||[]).map(p=>p.name).join(', ')} }, null, 2)}</pre>\n        <p className=\"text-default-500 leading-relaxed\">${apiDescription.replace(/`/g,'')}\n        </p>\n      </CardBody>\n      <CardFooter className=\"pt-2 flex justify-end\">\n        <Button color=\"primary\" variant=\"solid\">Action</Button>\n      </CardFooter>\n    </Card>\n  );\n}`;
-
-    const usageExample = `// Usage Example\n<${componentName} ${(props||[]).map(p => `${p.name}={/* ${p.type} */}`).join(' ')} />`;
-
-    const stylingNotes = `Uses Tailwind utility classes for layout, spacing, colors and rounded corners. Extend by passing className to root <Card>. Provide composition slots if needed. ${styling}`;
-
-    return {
-      componentName,
-      code: componentCode,
-      usage: usageExample,
-      propsDefinition: propsInterface,
-      stylingNotes
-    };
-  }
+    return result.value;
+  },
 });
 
 export async function POST(req: Request) {
@@ -116,8 +157,11 @@ export async function POST(req: Request) {
   const result = await streamText({
     model: znapai('gpt-4o-mini'),
     messages: convertToModelMessages(messages),
-    tools: { browseDocumentation, generateComponent }
+    tools: {
+      browseDocumentation,
+      generateComponent,
+    },
   });
 
-  return result.toTextStreamResponse();
+  return result.toAIStreamResponse();
 }
