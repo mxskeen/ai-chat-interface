@@ -3,7 +3,7 @@
 // components/chat/Message.tsx
 // Implementation using ai-sdk.dev for message formatting and tool part rendering
 import { UIMessage } from '@ai-sdk/react'; // ai-sdk.dev message structure
-import { Card, CardBody } from '@heroui/react';
+// import { Card, CardBody } from '@heroui/react';
 import { DocumentationToolPart, ComponentToolPart } from './ToolParts';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/cjs/styles/hljs';
@@ -71,7 +71,7 @@ export function Message({ message }: MessageProps) {
                 })
               ) : (
                 // Regular message format with content
-                (message as any).content && parseAndRenderContent((message as any).content)
+                (message as { type: string; text: string; state?: string; output?: unknown }).content && parseAndRenderContent((message as { type: string; text: string; state?: string; output?: unknown }).content)
               )}
             </div>
           </div>

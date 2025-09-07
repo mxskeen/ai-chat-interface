@@ -1,7 +1,7 @@
 // components/chat/ToolParts.tsx
 // Tool parts implementation based on ai-sdk.dev's tool calling architecture
 // These components render the results of AI tool calls for documentation browsing and component generation
-import { Card, CardBody, Button } from '@heroui/react';
+// import { Card, CardBody, Button } from '@heroui/react';
 import { ExternalLink, Search } from 'lucide-react';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/cjs/styles/hljs';

@@ -1,7 +1,7 @@
 // app/api/chat/route.ts
 // This route implements the ai-sdk.dev architecture for tool calling and streaming responses
 // While we use direct OpenAI SDK calls for better ZnapAI compatibility, the structure follows ai-sdk.dev patterns
-import { z } from 'zod';
+// import { z } from 'zod';
 import { tvly } from '@/lib/tavily';
 import { znapai } from '@/lib/znapai';
 
@@ -45,7 +45,7 @@ async function browseDocumentation(url: string, isSearch = false) {
         });
         
         if (extractResponse.results && extractResponse.results.length > 0) {
-          const extractedContent = extractResponse.results[0] as any;
+          const extractedContent = extractResponse.results[0] as Record<string, unknown>;
           result = {
             type: 'url',
             url: url,
@@ -133,7 +133,7 @@ async function generateComponent(params: {
   uiLibrary?: string;
   theme?: string;
 }) {
-  const { componentName, apiDescription, apiDocUrl, props, styling, uiLibrary = 'heroui', theme } = params;
+  const { componentName, apiDescription, apiDocUrl, props, styling, theme } = params;
   
   // Generate React component with typed props and validation
   const typedProps = props || [];
@@ -201,7 +201,7 @@ export function ExampleUsage() {
 }
 
 // Helper function to generate UI elements based on prop types
-function generateUIBasedOnProps(props: Array<any>, styling: string): string {
+function generateUIBasedOnProps(props: Array<{ name?: string; type?: string; [key: string]: unknown }>, _styling: string): string {
   if (!props.length) {
     return `<div className="p-4">
           <p>Component content will be displayed here.</p>
@@ -211,8 +211,10 @@ function generateUIBasedOnProps(props: Array<any>, styling: string): string {
 
   // Generate UI elements based on prop types
   const uiElements = props.map(prop => {
-    const propName = prop.name;
-    const propType = prop.type.toLowerCase();
+    const propName = prop.name as string | undefined;
+    const propType = ((prop.type as string) || '').toLowerCase();
+    
+    if (!propName || !propType) return '';
     
     if (propType.includes('string') && (propName.includes('title') || propName.includes('name'))) {
       return `<h4 className="font-semibold text-lg">{${propName} || 'Title'}</h4>`;
@@ -255,8 +257,11 @@ function generateUIBasedOnProps(props: Array<any>, styling: string): string {
 }
 
 // Helper function to generate example values based on prop types
-function getExampleValue(prop: any): string {
-  const propType = prop.type.toLowerCase();
+function getExampleValue(prop: { name?: string; type?: string; [key: string]: unknown }): string {
+  const propType = ((prop.type as string) || '').toLowerCase();
+  const propName = prop.name as string | undefined;
+  
+  if (!propName || !propType) return 'undefined';
   
   if (propType.includes('string')) {
     if (prop.name.includes('title') || prop.name.includes('name')) {
@@ -318,10 +323,18 @@ export async function POST(req: Request) {
     console.log('Received messages:', messages.length);
     
     // Convert messages to the correct format
-    const modelMessages = messages.map((msg: any) => ({
-      role: msg.role,
-      content: msg.content || (msg.parts && msg.parts[0]?.text) || ''
-    }));
+    const modelMessages = messages.map((msg: Record<string, unknown>) => {
+      // Ensure we have a valid message structure
+      const content = typeof msg.content === 'string' ? msg.content : 
+                     (msg.parts && Array.isArray(msg.parts) && msg.parts[0] && typeof msg.parts[0] === 'object' && 
+                     'text' in msg.parts[0] && typeof msg.parts[0].text === 'string') ? 
+                     msg.parts[0].text : '';
+      
+      return {
+        role: msg.role as string,
+        content
+      };
+    });
     
     console.log('Model messages:', modelMessages);
     
@@ -445,8 +458,8 @@ Always use the available functions when appropriate and focus on practical imple
         };
         
         try {
-          let toolCalls = new Map(); // Store multiple tool calls by index
-          let activeCalls = new Set(); // Track which calls are active
+          const toolCalls = new Map(); // Store multiple tool calls by index
+          const activeCalls = new Set(); // Track which calls are active
           
           for await (const chunk of completion) {
             if (isControllerClosed) break;
@@ -575,12 +588,12 @@ Always use the available functions when appropriate and focus on practical imple
                 
                 if (browsingCalls.length > 0) {
                   followUpText += `## 📚 Documentation Analysis\n\n`;
-                  browsingCalls.forEach((call, index) => {
+                  browsingCalls.forEach((call) => {
                     if (call.result) {
-                      const result = call.result as any;
+                      const result = call.result as Record<string, unknown>;
                       followUpText += `**${result.url || 'Documentation'}**\n`;
                       followUpText += `- Title: ${result.title || 'N/A'}\n`;
-                      followUpText += `- Content Length: ${result.content?.length || 0} characters\n\n`;
+                      followUpText += `- Content Length: ${typeof result.content === 'string' ? result.content.length : 0} characters\n\n`;
                     }
                   });
                   
@@ -589,9 +602,9 @@ Always use the available functions when appropriate and focus on practical imple
                 
                 if (componentCalls.length > 0) {
                   followUpText += `## ⚛️ Generated Components\n\n`;
-                  componentCalls.forEach((call, index) => {
+                  componentCalls.forEach((call) => {
                     if (call.result) {
-                      const result = call.result as any;
+                      const result = call.result as Record<string, unknown>;
                       followUpText += `**${result.componentName || 'Component'}**\n`;
                       followUpText += `${result.description || 'React component generated successfully'}\n\n`;
                     }

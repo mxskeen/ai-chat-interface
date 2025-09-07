@@ -1,7 +1,7 @@
 'use client';
 
 // app/layout.tsx
-import type { Metadata } from 'next';
+// import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { HeroUIProvider } from '@heroui/react';

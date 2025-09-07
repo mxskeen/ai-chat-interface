@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ChatInput } from './ChatInput';
 import { Message } from './Message';
 import { UIMessage } from '@ai-sdk/react'; // ai-sdk.dev message format
-import { Card } from '@heroui/react';
+// import { Card } from '@heroui/react';
 
 function createMessage(role: 'user' | 'assistant', text: string): UIMessage {
   return {
@@ -49,7 +49,7 @@ export function ChatInterface() {
         throw new Error('No response body');
       }
 
-      let assistantMessage = createMessage('assistant', '');
+      const assistantMessage = createMessage('assistant', '');
       setMessages((prev) => [...prev, assistantMessage]);
 
       const decoder = new TextDecoder();
@@ -77,7 +77,7 @@ export function ChatInterface() {
                   if (lastMessage && lastMessage.role === 'assistant') {
                     lastMessage.parts[0] = {
                       type: 'text',
-                      text: (lastMessage.parts[0] as any).text + data.textDelta
+                      text: (lastMessage.parts[0] as { type: string; text: string }).text + data.textDelta
                     };
                   }
                   return newMessages;
@@ -91,7 +91,7 @@ export function ChatInterface() {
                     lastMessage.parts.push({
                       type: data.toolName === 'browseDocumentation' ? 'tool-browseDocumentation' : 'tool-generateComponent',
                       state: 'input-streaming',
-                    } as any);
+                    } as { type: string; state: string; output?: unknown });
                   }
                   return newMessages;
                 });
@@ -102,7 +102,7 @@ export function ChatInterface() {
                   const lastMessage = newMessages[newMessages.length - 1];
                   if (lastMessage && lastMessage.role === 'assistant') {
                     // Find and update the tool part
-                    const toolPartIndex = lastMessage.parts.findIndex((part: any) => 
+                    const toolPartIndex = lastMessage.parts.findIndex((part: { type: string; state: string }) => 
                       part.type === data.type && part.state === 'input-streaming'
                     );
                     if (toolPartIndex !== -1) {
@@ -110,7 +110,7 @@ export function ChatInterface() {
                         type: data.type,
                         state: data.state,
                         output: data.output,
-                      } as any;
+                      } as { type: string; state: string; output?: unknown };
                     }
                   }
                   return newMessages;
@@ -122,7 +122,7 @@ export function ChatInterface() {
                   const lastMessage = newMessages[newMessages.length - 1];
                   if (lastMessage && lastMessage.role === 'assistant') {
                     const toolType = data.toolName === 'browseDocumentation' ? 'tool-browseDocumentation' : 'tool-generateComponent';
-                    const toolPartIndex = lastMessage.parts.findIndex((part: any) => 
+                    const toolPartIndex = lastMessage.parts.findIndex((part: { type: string; state: string }) => 
                       part.type === toolType && part.state === 'input-streaming'
                     );
                     if (toolPartIndex !== -1) {
@@ -130,7 +130,7 @@ export function ChatInterface() {
                         type: toolType,
                         state: 'output-error',
                         errorText: data.errorText,
-                      } as any;
+                      } as { type: string; state: string; output?: unknown };
                     }
                   }
                   return newMessages;
@@ -153,7 +153,7 @@ export function ChatInterface() {
       setMessages((prev) => {
         const newMessages = [...prev];
         if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant' && 
-            (newMessages[newMessages.length - 1].parts[0] as any).text === '') {
+            (newMessages[newMessages.length - 1].parts[0] as { type: string; state: string; output?: unknown }).text === '') {
           newMessages.pop();
         }
         return newMessages;
