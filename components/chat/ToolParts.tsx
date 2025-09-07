@@ -1,6 +1,8 @@
 // components/chat/ToolParts.tsx
 import { Card, CardBody, Button } from '@heroui/react';
 import { ExternalLink, Search } from 'lucide-react';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { dracula } from 'react-syntax-highlighter/dist/cjs/styles/hljs';
 
 // Define types for tool parts
 interface ToolPartBase {
@@ -214,14 +216,28 @@ export function ComponentToolPart({ part }: ComponentToolPartProps) {
               <strong>Component:</strong> {part.output?.componentName}
             </div>
             <div className="bg-gray-900 text-gray-100 p-3 rounded border overflow-x-auto">
-              <pre className="text-sm">
-                <code>{part.output?.code}</code>
-              </pre>
+              <SyntaxHighlighter
+                language="tsx"
+                style={dracula}
+                customStyle={{ margin: 0, borderRadius: '0.25rem' }}
+                codeTagProps={{ style: { fontSize: '0.875rem' } }}
+              >
+                {part.output?.code || ''}
+              </SyntaxHighlighter>
             </div>
             {part.output?.usage && (
               <div className="mt-3 bg-blue-50 p-3 rounded">
                 <h5 className="font-semibold mb-1">Usage Example:</h5>
-                <pre className="text-sm">{part.output.usage}</pre>
+                <div className="bg-gray-900 text-gray-100 p-3 rounded border overflow-x-auto">
+                  <SyntaxHighlighter
+                    language="tsx"
+                    style={dracula}
+                    customStyle={{ margin: 0, borderRadius: '0.25rem' }}
+                    codeTagProps={{ style: { fontSize: '0.875rem' } }}
+                  >
+                    {part.output.usage}
+                  </SyntaxHighlighter>
+                </div>
               </div>
             )}
           </CardBody>
