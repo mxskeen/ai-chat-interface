@@ -1,4 +1,6 @@
 // app/api/chat/route.ts
+// This route implements the ai-sdk.dev architecture for tool calling and streaming responses
+// While we use direct OpenAI SDK calls for better ZnapAI compatibility, the structure follows ai-sdk.dev patterns
 import { z } from 'zod';
 import { tvly } from '@/lib/tavily';
 import { znapai } from '@/lib/znapai';
@@ -43,7 +45,7 @@ async function browseDocumentation(url: string, isSearch = false) {
         });
         
         if (extractResponse.results && extractResponse.results.length > 0) {
-          const extractedContent = extractResponse.results[0];
+          const extractedContent = extractResponse.results[0] as any;
           result = {
             type: 'url',
             url: url,
@@ -53,21 +55,21 @@ async function browseDocumentation(url: string, isSearch = false) {
           };
         } else {
           // Fallback to search if extract fails
-        const domain = new URL(url).hostname;
-        const searchQuery = `site:${domain} documentation`;
-        
+          const domain = new URL(url).hostname;
+          const searchQuery = `site:${domain} documentation`;
+          
           const searchResponse = await tvly.search(searchQuery, {
-          search_depth: "advanced",
-          max_results: 5,
-          include_answer: true,
-          include_raw_content: true,
-        });
+            search_depth: "advanced",
+            max_results: 5,
+            include_answer: true,
+            include_raw_content: true,
+          });
         
-        // Find the most relevant result matching the URL
+          // Find the most relevant result matching the URL
           const relevantResult = searchResponse.results.find((item: SearchResult) => 
-          item.url.includes(domain) || 
-          item.url.includes(url.split('/')[2])
-        );
+            item.url.includes(domain) || 
+            item.url.includes(url.split('/')[2])
+          );
         
         if (relevantResult) {
           result = {
@@ -81,9 +83,9 @@ async function browseDocumentation(url: string, isSearch = false) {
           result = {
             type: 'search',
             query: url,
-              answer: searchResponse.answer,
-              results: searchResponse.results,
-            };
+            answer: searchResponse.answer,
+            results: searchResponse.results,
+          };
           }
         }
       } catch (extractError) {
@@ -105,7 +107,7 @@ async function browseDocumentation(url: string, isSearch = false) {
           query: searchQuery,
           answer: searchResponse.answer,
           results: searchResponse.results,
-        };
+          };
         }
       }
       
@@ -192,10 +194,10 @@ export function ExampleUsage() {
   
     return {
       componentName,
-    code: componentCode,
-    usage: usageExample,
-    documentation: apiDocUrl,
-  };
+      code: componentCode,
+      usage: usageExample,
+      documentation: apiDocUrl,
+    };
 }
 
 // Helper function to generate UI elements based on prop types

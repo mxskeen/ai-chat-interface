@@ -1,9 +1,10 @@
 'use client';
 
+// Using ai-sdk.dev for message formatting and UI components
 import { useState } from 'react';
 import { ChatInput } from './ChatInput';
 import { Message } from './Message';
-import { UIMessage } from '@ai-sdk/react';
+import { UIMessage } from '@ai-sdk/react'; // ai-sdk.dev message format
 import { Card } from '@heroui/react';
 
 function createMessage(role: 'user' | 'assistant', text: string): UIMessage {
@@ -165,51 +166,120 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 space-y-4">
-      <Card className="p-4 mb-4 bg-primary-50">
-        <h1 className="text-2xl font-bold mb-2">AI Assistant</h1>
-        <p className="text-sm text-gray-700">
-          This AI assistant can help you understand API documentation and generate React components.
-          Try asking about API integration or generating components!
-        </p>
-      </Card>
-      
-      {error && (
-        <Card className="p-4 mb-4 bg-red-50 border-red-200">
-          <div className="flex items-center gap-2">
-            <div className="text-red-600">⚠️</div>
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <header className="border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-red-800">Error</h3>
-              <p className="text-sm text-red-600">{error}</p>
-              <p className="text-xs text-red-500 mt-1">
-                Make sure your API keys are configured in .env.local file
+              <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+                AI Assistant
+              </h1>
+              <p className="text-sm text-[var(--muted)] mt-0.5">
+                API documentation analysis and React component generation
               </p>
             </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-[var(--success)] rounded-full"></div>
+              <span className="text-xs text-[var(--muted)] font-medium">Online</span>
+            </div>
           </div>
-        </Card>
+        </div>
+      </header>
+
+      {/* Error State */}
+      {error && (
+        <div className="mx-6 mt-4">
+          <div className="bg-[var(--error)]/5 border border-[var(--error)]/20 rounded-xl p-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-5 h-5 bg-[var(--error)] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-[var(--foreground)]">Connection Error</h3>
+                <p className="text-sm text-[var(--muted)] mt-1 leading-relaxed">{error}</p>
+                <p className="text-xs text-[var(--muted)] mt-2 opacity-75">
+                  Ensure your API keys are configured in the .env.local file
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-      
-      <div className="space-y-3">
+
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-6 py-6 space-y-6">
+          {messages.length === 0 && !isLoading && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-[var(--accent)]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-[var(--foreground)] mb-2">
+                Ready to assist you
+              </h3>
+              <p className="text-[var(--muted)] text-sm leading-relaxed max-w-md mx-auto">
+                Ask me to browse API documentation, generate React components, or explain integration patterns. 
+                Try mentioning BillingSDK or DodoPayments for examples.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                <button 
+                  onClick={() => handleSend("Browse the documentation at billingsdk.com")}
+                  className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent)]/50 transition-colors"
+                >
+                  Browse BillingSDK docs
+                </button>
+                <button 
+                  onClick={() => handleSend("Generate a pricing card component")}
+                  className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent)]/50 transition-colors"
+                >
+                  Generate pricing component
+                </button>
+              </div>
+            </div>
+          )}
+          
         {messages.map((msg) => (
           <Message key={msg.id} message={msg} />
         ))}
-        
-        {isLoading && (
-          <Card className="p-4 bg-blue-50 text-center">
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          
+          {isLoading && (
+            <div className="flex items-center space-x-3 py-4">
+              <div className="w-8 h-8 bg-[var(--accent)]/10 rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-[var(--accent)]/30 border-t-[var(--accent)] rounded-full animate-spin"></div>
+              </div>
+              <div className="flex-1">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl px-4 py-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-[var(--muted)] rounded-full animate-pulse"></div>
+                      <div className="w-2 h-2 bg-[var(--muted)] rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                      <div className="w-2 h-2 bg-[var(--muted)] rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                    </div>
+                    <span className="text-sm text-[var(--muted)]">AI is thinking...</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="mt-2 text-sm text-blue-600">AI is thinking...</p>
-          </Card>
-        )}
+          )}
+        </div>
       </div>
-      
-      <ChatInput 
-        value={input} 
-        onChange={setInput} 
-        onSend={handleSend} 
-        disabled={isLoading} 
-      />
+
+      {/* Input Area */}
+      <div className="border-t border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md">
+        <div className="px-6 py-4">
+          <ChatInput 
+            value={input} 
+            onChange={setInput} 
+            onSend={handleSend} 
+            disabled={isLoading} 
+          />
+        </div>
+      </div>
     </div>
   );
 }

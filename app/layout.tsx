@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-[var(--background)] text-[var(--foreground)] min-h-screen`}>
         <HeroUIProvider>
           {children}
         </HeroUIProvider>
