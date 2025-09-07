@@ -5,8 +5,8 @@ Smart AI-powered chat interface for API documentation analysis and React compone
 ## Stack
 - Framework: Next.js 15 with App Router
 - Frontend: React + TypeScript + TailwindCSS
-- AI Integration: ai-sdk.dev + OpenAI SDK
-- UI Library: @heroui/react (not shadcn/ui)
+- AI Integration: ai-sdk.dev + OpenAI SDK (for custom znapai support)
+- UI Library: @heroui/react 
 - Search Integration: Tavily API
 
 ## Core Features
