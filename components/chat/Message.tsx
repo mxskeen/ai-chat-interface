@@ -36,32 +36,37 @@ export function Message({ message }: MessageProps) {
           )}
         </div>
         <div className="space-y-3">
-          {message.parts && message.parts.map((part: any, index: number) => {
-            switch (part.type) {
-              case 'text': {
-                if (!part.text) return null;
-                
-                // Process text to handle code blocks
-                return parseAndRenderContent(part.text, index);
+          {/* Handle both UIMessage format and regular message format */}
+          {message.parts ? (
+            // UIMessage format with parts
+            message.parts.map((part: any, index: number) => {
+              switch (part.type) {
+                case 'text': {
+                  if (!part.text) return null;
+                  return parseAndRenderContent(part.text, index);
+                }
+                case 'tool-browseDocumentation':
+                  return (
+                    <DocumentationToolPart 
+                      key={index} 
+                      part={part} 
+                    />
+                  );
+                case 'tool-generateComponent':
+                  return (
+                    <ComponentToolPart 
+                      key={index} 
+                      part={part} 
+                    />
+                  );
+                default:
+                  return null;
               }
-              case 'tool-browseDocumentation':
-                return (
-                  <DocumentationToolPart 
-                    key={index} 
-                    part={part} 
-                  />
-                );
-              case 'tool-generateComponent':
-                return (
-                  <ComponentToolPart 
-                    key={index} 
-                    part={part} 
-                  />
-                );
-              default:
-                return null;
-            }
-          })}
+            })
+          ) : (
+            // Regular message format with content
+            (message as any).content && parseAndRenderContent((message as any).content)
+          )}
         </div>
       </CardBody>
     </Card>

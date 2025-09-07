@@ -1,10 +1,7 @@
 // lib/znapai.ts
-import { createOpenAI } from '@ai-sdk/openai';
+import OpenAI from 'openai';
 
-export const znapai = createOpenAI({
+export const znapai = new OpenAI({
   apiKey: process.env.ZnapAI_API_KEY || '',
-  baseURL: "https://api.znapai.com/v1",
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: "https://api.znapai.com/",
 });
